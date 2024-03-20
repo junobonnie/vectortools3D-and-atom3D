@@ -95,25 +95,49 @@ class World:
                 + ', gravity = ' + str(self.gravity) + ')')
 
 class Render:
-    def __init__(self, screen, width, height, depth, angle_x = 0, angle_y = 0, angle_z = 0, focus_factor = 1):
+    def __init__(self, screen, width, height, depth, angle=(0,0,0), omega = (0,0,0), focus_factor = 1):
         pg.init()
         self.screen = screen
         self.width = width
         self.height = height
         self.depth = depth
         self.focus_factor = focus_factor
-        self.render_SO2 = SO2_x(angle_x).dot(SO2_y(angle_y).dot(SO2_z(angle_z)))
         self.render_vector = Vector(0, height, 0)
         self.render_metric = Tensor(1, 0, 0, 
                                     0, -1, 0,
                                     0, 0, 1)
         self.origin_vector = Vector(width/2, height/2, depth/2)
+        self.angle = angle
+        self.omega = omega
+        self.t = 0
+
+    def update_time(self, t):
+        self.t = t
+
+    def render_SO3(self):
+        if self.omega == (0, 0, 0):
+            omega_rotaion = Tensor(1, 0, 0,
+                                    0, 1, 0,
+                                    0, 0, 1)
+        else:
+            omega_rotaion = SO3_x(self.omega[0]*self.t).dot(
+                            SO3_y(self.omega[1]*self.t).dot(
+                            SO3_z(self.omega[2]*self.t)))
+        if self.angle == (0, 0, 0):
+            angle_rotaion = Tensor(1, 0, 0,
+                                    0, 1, 0,
+                                    0, 0, 1)
+        else:
+            angle_rotaion = SO3_x(self.angle[0]).dot(
+                            SO3_y(self.angle[1]).dot(
+                            SO3_z(self.angle[2])))
+        return omega_rotaion.dot(angle_rotaion)
 
     def rendering_vector(self, vector):
         return self.render_vector + self.render_metric.dot(vector + self.origin_vector)
 
     def text(self, text, font, size, pos, color):
-        pos = self.render_SO2.dot(pos)
+        pos = self.render_SO3().dot(pos)
         value = self.focus_factor*self.depth/(pos.z + self.depth)
         font_ = pg.font.SysFont(font, int(value*size))
         text_ = font_.render(text, True, color)
@@ -123,7 +147,7 @@ class Render:
     def polygon(self, positions, color):
         P_list = []
         for pos in positions:
-            pos = self.render_SO2.dot(pos)
+            pos = self.render_SO3().dot(pos)
             value = self.focus_factor*self.depth/(pos.z + self.depth)
             P = self.rendering_vector(value*pos)
             P_list.append([P.x, P.y])
@@ -137,7 +161,7 @@ class Render:
             self.polygon(edge, color)
             
     def circle(self, pos, radius, color):
-        pos = self.render_SO2.dot(pos)
+        pos = self.render_SO3().dot(pos)
         value = self.focus_factor*self.depth/(pos.z + self.depth)
         render_pos =self.rendering_vector(value*pos)
         pg.draw.circle(self.screen, color, (render_pos.x, render_pos.y), value*radius)
@@ -302,7 +326,7 @@ if __name__ == '__main__':
     depth = 1000
 
     screen = pg.display.set_mode((width, height))
-    render = Render(screen, width, height, depth)
+    render = Render(screen, width, height, depth, (m.pi/4, m.pi/4, 0), (0, 10, 0))
     clock = pg.time.Clock()
 
     black = pg.Color('black')
@@ -312,7 +336,7 @@ if __name__ == '__main__':
     blue = pg.Color('blue')
 
     e1 = Element(name = 'Helium', mass = 1, radius = 10, color = red)
-    atom1 = Atom(e1, Vector(-200, 0, 1), Vector(50, 0, 0))
+    atom1 = Atom(e1, Vector(-200, 0, 1), Vector(500, 0, 0))
     atom2 = Atom(e1, Vector(0, 0, 0))
     atom3 = Atom(e1, Vector(25, -10, 0))
     atom4 = Atom(e1, Vector(25, 10, 0))
@@ -330,10 +354,11 @@ if __name__ == '__main__':
     #simulator.load_snapshot('snapshots/snapshot_00000100.txt')
     while True:
         t = simulator.clock()
+        simulator.render.update_time(t)
         simulator.draw_background(white)
         simulator.draw_grid(100)
         simulator.atom_atom_collision()
-        simulator.atom_atom_fusion()
+        #simulator.atom_atom_fusion()
         simulator.main()
         simulator.draw_atom()
         

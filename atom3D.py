@@ -96,7 +96,8 @@ class World:
 
 class Render:
     def __init__(self, screen, width, height, depth, angle=(0,0,0), omega = (0,0,0), focus_factor = 1):
-        pg.init()
+        if not screen == None:
+            pg.init()
         self.screen = screen
         self.width = width
         self.height = height
@@ -176,6 +177,7 @@ class Simulator:
         self.render = render
         self.count_screen = 0
         self.count_snapshot = 0
+        self.region_size = 0
         self.grid_size = grid_size
         self.grid = None
 
@@ -208,46 +210,45 @@ class Simulator:
                 (-self.render.depth/2 < atom.pos.z < self.render.depth/2)):
                 self.render.atom(atom)
 
-    def make_grid(self):
-        nx = int(self.render.width//self.grid_size+1)
-        ny = int(self.render.height//self.grid_size+1)
-        nz = int(self.render.depth//self.grid_size+1)
-        grid = [[] for i in range(nx*ny*nz)]
+    def update_region_size(self):
+        self.region_size = 0
         for atom in self.world.atoms:
-            i = int((self.render.width/2 + atom.pos.x)//self.grid_size)
-            j = int((self.render.height/2 + atom.pos.y)//self.grid_size)
-            k = int((self.render.depth/2 + atom.pos.z)//self.grid_size)
-            if (0 <= i < nx) and (0 <= j < ny) and (0 <= k < nz):
-                grid[i+nx*j+nx*ny*k].append(atom)
+            for p in atom.pos.list():
+                self.region_size = max(self.region_size, 2*abs(p))
+        return self.region_size
+
+    def make_grid(self):
+        n = int(self.region_size//self.grid_size+1)
+        grid = [[] for i in range(n**3)]
+        for atom in self.world.atoms:
+            i = int((self.region_size/2 + atom.pos.x)//self.grid_size)
+            j = int((self.region_size/2 + atom.pos.y)//self.grid_size)
+            k = int((self.region_size/2 + atom.pos.z)//self.grid_size)
+            if (0 <= i < n) and (0 <= j < n) and (0 <= k < n):
+                grid[i+n*j+n*n*k].append(atom)
         self.grid = grid
     
     def get_near_atoms(self, atom):
-        nx = int(self.render.width//self.grid_size+1)
-        ny = int(self.render.height//self.grid_size+1)
-        nz = int(self.render.depth//self.grid_size+1)
-        i = int((self.render.width/2 + atom.pos.x)//self.grid_size)
-        j = int((self.render.height/2 + atom.pos.y)//self.grid_size)
-        k = int((self.render.depth/2 + atom.pos.z)//self.grid_size)
+        n = int(self.region_size//self.grid_size+1)
+        i = int((self.region_size/2 + atom.pos.x)//self.grid_size)
+        j = int((self.region_size/2 + atom.pos.y)//self.grid_size)
+        k = int((self.region_size/2 + atom.pos.z)//self.grid_size)
         atoms = []
         for i_ in (i-1, i, i+1):
             for j_ in (j-1, j, j+1):
                 for k_ in (k-1, k, k+1):
-                    if (0 <= i_ < nx) and (0 <= j_ < ny) and (0 <= k_ < nz):
-                        atoms += self.grid[i_+nx*j_+nx*ny*k_]
+                    if (0 <= i_ < n) and (0 <= j_ < n) and (0 <= k_ < n):
+                        atoms += self.grid[i_+n*j_+n*n*k_]
         return atoms
 
     def atom_atom_collision(self):
+        self.update_region_size()
         self.make_grid()
         for atom in self.world.atoms:
             atoms = self.get_near_atoms(atom)
             for other_atom in atoms:
                 #self.render.polygon([atom.pos, other_atom.pos], red)
                 atom.collision(other_atom, self.dt)
-
-    def atom_wall_collision(self):
-        for atom in self.world.atoms:
-            for wall in self.world.walls:
-                atom.collision(wall, self.dt)
     
     def atom_atom_fusion(self):
         while True:
@@ -327,7 +328,7 @@ if __name__ == '__main__':
 
     screen = pg.display.set_mode((width, height))
     render = Render(screen, width, height, depth, (m.pi/4, m.pi/4, 0), (0, 10, 0))
-    clock = pg.time.Clock()
+    #clock = pg.time.Clock()
 
     black = pg.Color('black')
     white = pg.Color('white')
@@ -372,7 +373,7 @@ if __name__ == '__main__':
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 sys.exit()
-        clock.tick(100)
+        #clock.tick(100)
         pg.display.update()
         
         #simulator.save_screen('images/pocket_ball_demo')

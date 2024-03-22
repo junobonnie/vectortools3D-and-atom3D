@@ -172,17 +172,17 @@ class Vector:
     def array(self):
         return np.array([self.x, self.y, self.z])
     
-def SO2_z(theta):
+def SO3_z(theta):
     return Tensor(m.cos(theta), -m.sin(theta), 0,
                   m.sin(theta), m.cos(theta), 0,
                   0, 0, 1)
 
-def SO2_y(theta):
+def SO3_y(theta):
     return Tensor(m.cos(theta), 0, m.sin(theta),
                   0, 1, 0,
                   -m.sin(theta), 0, m.cos(theta))
 
-def SO2_x(theta):
+def SO3_x(theta):
     return Tensor(1, 0, 0,
                   0, m.cos(theta), -m.sin(theta),
                   0, m.sin(theta), m.cos(theta))
@@ -190,7 +190,7 @@ if __name__ == '__main__':
     t1 = Tensor(1, 2, 3,
                 4, 5, 6,
                 7, 8, 10)
-    t2 = SO2_z(m.pi/4)
+    t2 = SO3_z(m.pi/4)
     t3 = Tensor(2, 3, 4, 
                 5, 6, 7,
                 8, 9, 10)

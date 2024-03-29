@@ -421,8 +421,8 @@ if __name__ == '__main__':
         render.text('pos = (%.2f, %.2f, %.2f)'%(atom1.pos.x, atom1.pos.y, atom1.pos.z) , None, 30, Vector(atom1.pos.x -100, atom1.pos.y - 30, atom1.pos.z), black)
         render.text('vel = (%.2f, %.2f, %.2f)'%(atom1.vel.x, atom1.vel.y, atom1.vel.z) , None, 30, Vector(atom1.pos.x -100, atom1.pos.y - 50, atom1.pos.z), black)
 
-        render.text('pos = (%.2f, %.2f, %.2f)'%(atom7.pos.x, atom7.pos.y, atom7.pos.z) , None, 30, Vector(atom7.pos.x -100, atom7.pos.y - 30, atom1.pos.z), blue)
-        render.text('vel = (%.2f, %.2f, %.2f)'%(atom7.vel.x, atom7.vel.y, atom7.vel.z) , None, 30, Vector(atom7.pos.x -100, atom7.pos.y - 50, atom1.pos.z), blue)
+        render.text('pos = (%.2f, %.2f, %.2f)'%(atom7.pos.x, atom7.pos.y, atom7.pos.z) , None, 30, Vector(atom7.pos.x -100, atom7.pos.y - 30, atom7.pos.z), blue)
+        render.text('vel = (%.2f, %.2f, %.2f)'%(atom7.vel.x, atom7.vel.y, atom7.vel.z) , None, 30, Vector(atom7.pos.x -100, atom7.pos.y - 50, atom7.pos.z), blue)
 
         for event in pg.event.get():
             if event.type == pg.QUIT:

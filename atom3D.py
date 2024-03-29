@@ -393,6 +393,9 @@ if __name__ == '__main__':
 
     simulator = Simulator(0.01, world, render)
     simulator.load_snapshot('snapshots/snapshot_00000000.hdf5')
+
+    atom1 = simulator.world.atoms[0]
+    atom7 = simulator.world.atoms[6]
     while True:
         t = simulator.clock()
         simulator.render.update_time(t)

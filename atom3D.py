@@ -307,16 +307,28 @@ class Simulator:
             world.attrs['t'] = self.world.t
             world.attrs['gravity'] = self.world.gravity.list()
             atoms = world.create_group('atoms')
+            N = len(self.world.atoms)
+            element = [0]*N
+            mass = [0]*N
+            radius = [0]*N
+            color = [0]*N
+            pos = [0]*N
+            vel = [0]*N
             count = 0
             for atom in self.world.atoms:
+                element[count] = atom.element.name
+                mass[count] = atom.element.mass
+                radius[count] = atom.element.radius
+                color[count] = atom.element.color
+                pos[count] = atom.pos.list()
+                vel[count] = atom.vel.list()
                 count += 1
-                atom_ = atoms.create_group('atom'+str(count))
-                atom_.attrs['element'] = atom.element.name
-                atom_.attrs['mass'] = atom.element.mass
-                atom_.attrs['radius'] = atom.element.radius
-                atom_.attrs['color'] = atom.element.color
-                atom_.attrs['pos'] = atom.pos.list()
-                atom_.attrs['vel'] = atom.vel.list()
+            atoms.create_dataset('element', data = element)
+            atoms.create_dataset('mass', data = mass)
+            atoms.create_dataset('radius', data = radius)
+            atoms.create_dataset('color', data = color)
+            atoms.create_dataset('pos', data = pos)
+            atoms.create_dataset('vel', data = vel)    
             f.close()
         self.count_snapshot += 1
         
@@ -352,11 +364,10 @@ class Simulator:
         t = world.attrs['t']
         gravity = self.list_to_vector(world.attrs['gravity'])
         atoms = []
-        for atom_ in world['atoms']:
-            atom = world['atoms'][atom_]
-            element = Element(atom.attrs['element'], atom.attrs['mass'], atom.attrs['radius'], atom.attrs['color'])
-            pos = self.list_to_vector(atom.attrs['pos'])
-            vel = self.list_to_vector(atom.attrs['vel'])
+        for i in range(len(world['atoms']['element'])):
+            element = Element(world['atoms']['element'][i], world['atoms']['mass'][i], world['atoms']['radius'][i], world['atoms']['color'][i])
+            pos = self.list_to_vector(world['atoms']['pos'][i])
+            vel = self.list_to_vector(world['atoms']['vel'][i])
             atoms.append(Atom(element, pos, vel))
         self.world = World(t, atoms, gravity)
         f.close()

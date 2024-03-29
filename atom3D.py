@@ -10,6 +10,7 @@ from vectortools3D import *
 import pygame as pg
 import sys
 import itertools as it
+import h5py
 
 edges = []
 for i in it.combinations(it.product([0,1],repeat=3),2):
@@ -285,41 +286,80 @@ class Simulator:
             pg.image.save(self.render.screen, img)
         self.count_screen += 1
         
+    # def save_snapshot(self, directory, skip_number = 0):
+    #     if self.count_snapshot%(skip_number+1) == 0:
+    #         snapshot = directory + '/snapshot_%08d.txt' % (self.count_snapshot)
+    #         with open(snapshot, "w") as f:
+    #             atoms_info = ''
+    #             count = 0
+    #             for atom in self.world.atoms:
+    #                 count += 1
+    #                 atoms_info = atoms_info + 'atom' + str(count) + '{ element{ name:' + atom.element.name + ', mass:' + str(atom.element.mass) + ', radius:' + str(atom.element.radius) + ', color:' + str(atom.element.color) + ' }' + ', pos:' + str(atom.pos) + ', vel:' + str(atom.vel) + ' }, '
+                    
+    #             f.write('world{ t:' + str(self.world.t) + ', gravity:' + str(self.world.gravity) + ', atoms{ ' + atoms_info + ' }' + ' }')
+    #     self.count_snapshot += 1
+
     def save_snapshot(self, directory, skip_number = 0):
         if self.count_snapshot%(skip_number+1) == 0:
-            snapshot = directory + '/snapshot_%08d.txt' % (self.count_snapshot)
-            with open(snapshot, "w") as f:
-                atoms_info = ''
-                count = 0
-                for atom in self.world.atoms:
-                    count += 1
-                    atoms_info = atoms_info + 'atom' + str(count) + '{ element{ name:' + atom.element.name + ', mass:' + str(atom.element.mass) + ', radius:' + str(atom.element.radius) + ', color:' + str(atom.element.color) + ' }' + ', pos:' + str(atom.pos) + ', vel:' + str(atom.vel) + ' }, '
-                    
-                f.write('world{ t:' + str(self.world.t) + ', gravity:' + str(self.world.gravity) + ', atoms{ ' + atoms_info + ' }' + ' }')
+            snapshot = directory + '/snapshot_%08d.hdf5' % (self.count_snapshot)
+            f = h5py.File(snapshot, 'w')
+            world = f.create_group('world')
+            world.attrs['t'] = self.world.t
+            world.attrs['gravity'] = self.world.gravity.list()
+            atoms = world.create_group('atoms')
+            count = 0
+            for atom in self.world.atoms:
+                count += 1
+                atom_ = atoms.create_group('atom'+str(count))
+                atom_.attrs['element'] = atom.element.name
+                atom_.attrs['mass'] = atom.element.mass
+                atom_.attrs['radius'] = atom.element.radius
+                atom_.attrs['color'] = atom.element.color
+                atom_.attrs['pos'] = atom.pos.list()
+                atom_.attrs['vel'] = atom.vel.list()
+            f.close()
         self.count_snapshot += 1
         
-    def load_snapshot(self, snapshot_file):
-        with open(snapshot_file, "r") as f:
-            snapshot = f.read()
-            snapshot = snapshot.replace('world{ t:', '').replace(', gravity:', '#').replace(', atoms', '#').replace(' },  } }', '') 
-            snapshot = snapshot.split('#')
-            t = float(snapshot[0])
-            gravity = eval(snapshot[1])
+    # def load_snapshot(self, snapshot_file):
+    #     with open(snapshot_file, "r") as f:
+    #         snapshot = f.read()
+    #         snapshot = snapshot.replace('world{ t:', '').replace(', gravity:', '#').replace(', atoms', '#').replace(' },  } }', '') 
+    #         snapshot = snapshot.split('#')
+    #         t = float(snapshot[0])
+    #         gravity = eval(snapshot[1])
             
-            atoms_raw = snapshot[2]
-            atoms_raw = atoms_raw.replace('{ atom', '').split('atom')
-            atoms = []
-            for atom in atoms_raw:
-                atom = atom.replace('element{ ', '#').replace(' }, pos:', '#').replace(', vel:', '#').replace(' }, ', '')
-                atom = atom.split('#')
-                try:
-                    element_raw = atom[1]
-                    element_raw = element_raw.replace('name:', '#').replace(', mass:', '#').replace(', radius:', '#').replace(', color:', '#')
-                    element_raw = element_raw.split('#')
-                    atoms.append(Atom(Element(element_raw[1], float(element_raw[2]), float(element_raw[3]), eval(element_raw[4])), eval(atom[2]), eval(atom[3])))
-                except:
-                    pass
+    #         atoms_raw = snapshot[2]
+    #         atoms_raw = atoms_raw.replace('{ atom', '').split('atom')
+    #         atoms = []
+    #         for atom in atoms_raw:
+    #             atom = atom.replace('element{ ', '#').replace(' }, pos:', '#').replace(', vel:', '#').replace(' }, ', '')
+    #             atom = atom.split('#')
+    #             try:
+    #                 element_raw = atom[1]
+    #                 element_raw = element_raw.replace('name:', '#').replace(', mass:', '#').replace(', radius:', '#').replace(', color:', '#')
+    #                 element_raw = element_raw.split('#')
+    #                 atoms.append(Atom(Element(element_raw[1], float(element_raw[2]), float(element_raw[3]), eval(element_raw[4])), eval(atom[2]), eval(atom[3])))
+    #             except:
+    #                 pass
+    #     self.world = World(t, atoms, gravity)
+        
+    def list_to_vector(self, list):
+        return Vector(list[0], list[1], list[2])
+
+    def load_snapshot(self, snapshot_file):
+        f = h5py.File(snapshot_file, 'r')
+        world = f['world']
+        t = world.attrs['t']
+        gravity = self.list_to_vector(world.attrs['gravity'])
+        atoms = []
+        for atom_ in world['atoms']:
+            atom = world['atoms'][atom_]
+            element = Element(atom.attrs['element'], atom.attrs['mass'], atom.attrs['radius'], atom.attrs['color'])
+            pos = self.list_to_vector(atom.attrs['pos'])
+            vel = self.list_to_vector(atom.attrs['vel'])
+            atoms.append(Atom(element, pos, vel))
         self.world = World(t, atoms, gravity)
+        f.close()
                 
 if __name__ == '__main__':
     width = 1000
@@ -352,7 +392,7 @@ if __name__ == '__main__':
     world = World(0, atoms, gravity)
 
     simulator = Simulator(0.01, world, render)
-    #simulator.load_snapshot('snapshots/snapshot_00000100.txt')
+    simulator.load_snapshot('snapshots/snapshot_00000000.hdf5')
     while True:
         t = simulator.clock()
         simulator.render.update_time(t)
@@ -377,4 +417,4 @@ if __name__ == '__main__':
         pg.display.update()
         
         #simulator.save_screen('images/pocket_ball_demo')
-        #simulator.save_snapshot('snapshots', 99)
+        simulator.save_snapshot('snapshots', 99)

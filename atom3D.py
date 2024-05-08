@@ -302,34 +302,34 @@ class Simulator:
     def save_snapshot(self, directory, skip_number = 0):
         if self.count_snapshot%(skip_number+1) == 0:
             snapshot = directory + '/snapshot_%08d.hdf5' % (self.count_snapshot)
-            f = h5py.File(snapshot, 'w')
-            world = f.create_group('world')
-            world.attrs['t'] = self.world.t
-            world.attrs['gravity'] = self.world.gravity.list()
-            atoms = world.create_group('atoms')
-            N = len(self.world.atoms)
-            element = [0]*N
-            mass = [0]*N
-            radius = [0]*N
-            color = [0]*N
-            pos = [0]*N
-            vel = [0]*N
-            count = 0
-            for atom in self.world.atoms:
-                element[count] = atom.element.name
-                mass[count] = atom.element.mass
-                radius[count] = atom.element.radius
-                color[count] = (atom.element.color.r, atom.element.color.g, atom.element.color.b, atom.element.color.a)
-                pos[count] = atom.pos.list()
-                vel[count] = atom.vel.list()
-                count += 1
-            atoms.create_dataset('element', data = element)
-            atoms.create_dataset('mass', data = mass)
-            atoms.create_dataset('radius', data = radius)
-            atoms.create_dataset('color', data = color)
-            atoms.create_dataset('pos', data = pos)
-            atoms.create_dataset('vel', data = vel)    
-            f.close()
+            with h5py.File(snapshot, 'w') as f:
+                f.attrs['count_snapshot'] = self.count_snapshot
+                world = f.create_group('world')
+                world.attrs['t'] = self.world.t
+                world.attrs['gravity'] = self.world.gravity.list()
+                atoms = world.create_group('atoms')
+                N = len(self.world.atoms)
+                element = [0]*N
+                mass = [0]*N
+                radius = [0]*N
+                color = [0]*N
+                pos = [0]*N
+                vel = [0]*N
+                count = 0
+                for atom in self.world.atoms:
+                    element[count] = atom.element.name
+                    mass[count] = atom.element.mass
+                    radius[count] = atom.element.radius
+                    color[count] = (atom.element.color.r, atom.element.color.g, atom.element.color.b, atom.element.color.a)
+                    pos[count] = atom.pos.list()
+                    vel[count] = atom.vel.list()
+                    count += 1
+                atoms.create_dataset('element', data = element)
+                atoms.create_dataset('mass', data = mass)
+                atoms.create_dataset('radius', data = radius)
+                atoms.create_dataset('color', data = color)
+                atoms.create_dataset('pos', data = pos)
+                atoms.create_dataset('vel', data = vel)    
         self.count_snapshot += 1
         
     # def load_snapshot(self, snapshot_file):
@@ -359,19 +359,25 @@ class Simulator:
         return Vector(list[0], list[1], list[2])
 
     def load_snapshot(self, snapshot_file):
-        f = h5py.File(snapshot_file, 'r')
-        world = f['world']
-        t = world.attrs['t']
-        gravity = self.list_to_vector(world.attrs['gravity'])
-        N = len(world['atoms']['element'])
-        atoms = [0]*N
-        for i in range(N):
-            element = Element(world['atoms']['element'][i], world['atoms']['mass'][i], world['atoms']['radius'][i], pg.Color(world['atoms']['color'][i]))
-            pos = self.list_to_vector(world['atoms']['pos'][i])
-            vel = self.list_to_vector(world['atoms']['vel'][i])
-            atoms[i] = Atom(element, pos, vel)
-        self.world = World(t, atoms, gravity)
-        f.close()
+        with h5py.File(snapshot_file, 'r') as f:
+            self.count_snapshot = f.attrs['count_snapshot']
+            world = f['world']
+            t = world.attrs['t']
+            gravity = self.list_to_vector(world.attrs['gravity'])
+            element_ = world['atoms']['element']
+            mass_ = world['atoms']['mass']
+            radius_ = world['atoms']['radius']
+            color_ = world['atoms']['color']
+            pos_ = world['atoms']['pos']
+            vel_ = world['atoms']['vel']
+            N = len(element_)
+            atoms = [0]*N
+            for i in range(N):
+                element = Element(element_[i], mass_[i], radius_[i], pg.Color(color_[i]))
+                pos = self.list_to_vector(pos_[i])
+                vel = self.list_to_vector(vel_[i])
+                atoms[i] = Atom(element, pos, vel)
+            self.world = World(t, atoms, gravity)
                 
 if __name__ == '__main__':
     width = 1000

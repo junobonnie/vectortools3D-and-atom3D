@@ -319,7 +319,7 @@ class Simulator:
                 element[count] = atom.element.name
                 mass[count] = atom.element.mass
                 radius[count] = atom.element.radius
-                color[count] = atom.element.color
+                color[count] = (atom.element.color.r, atom.element.color.g, atom.element.color.b, atom.element.color.a)
                 pos[count] = atom.pos.list()
                 vel[count] = atom.vel.list()
                 count += 1

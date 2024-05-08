@@ -356,13 +356,13 @@ class Simulator:
     #     self.world = World(t, atoms, gravity)
         
     def list_to_vector(self, list):
-        return Vector(list[0], list[1], list[2])
+        return Vector(float(list[0]), float(list[1]), float(list[2]))
 
     def load_snapshot(self, snapshot_file):
         with h5py.File(snapshot_file, 'r') as f:
-            self.count_snapshot = f.attrs['count_snapshot']
+            self.count_snapshot = int(f.attrs['count_snapshot'])
             world = f['world']
-            t = world.attrs['t']
+            t = float(world.attrs['t'])
             gravity = self.list_to_vector(world.attrs['gravity'])
             element_ = world['atoms']['element']
             mass_ = world['atoms']['mass']
@@ -373,7 +373,7 @@ class Simulator:
             N = len(element_)
             atoms = [0]*N
             for i in range(N):
-                element = Element(element_[i], mass_[i], radius_[i], pg.Color(color_[i]))
+                element = Element(element_[i], float(mass_[i]), float(radius_[i]), pg.Color(color_[i]))
                 pos = self.list_to_vector(pos_[i])
                 vel = self.list_to_vector(vel_[i])
                 atoms[i] = Atom(element, pos, vel)
